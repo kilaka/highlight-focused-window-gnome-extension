@@ -1,0 +1,7 @@
+{
+  "uuid": "highlight-focused-window@alik",
+  "name": "Highlight Focused Window",
+  "description": "Draws a subtle translucent purple border inside the focused window.",
+  "version": 1,
+  "shell-version": ["46"]
+}
