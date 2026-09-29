@@ -1,3 +1,4 @@
+import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
@@ -6,6 +7,7 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 export default class HighlightFocusedWindowExtension extends Extension {
     enable() {
         this._border = null;
+        this._borderBindings = [];
         this._settings = this.getSettings();
         this._trackedWindow = null;
         this._trackedWindowSignals = [];
@@ -74,6 +76,8 @@ export default class HighlightFocusedWindowExtension extends Extension {
     }
 
     _removeBorder() {
+        this._borderBindings.forEach(binding => binding.unbind());
+        this._borderBindings = [];
         this._border?.destroy();
         this._border = null;
     }
@@ -112,6 +116,7 @@ export default class HighlightFocusedWindowExtension extends Extension {
         if (rect.width <= 0 || rect.height <= 0)
             return;
 
+        const actor = window.get_compositor_private();
         this._removeBorder();
 
         this._border = new St.Bin({
@@ -122,6 +127,20 @@ export default class HighlightFocusedWindowExtension extends Extension {
         global.window_group.add_child(this._border);
         this._border.set_position(rect.x, rect.y);
         this._border.set_size(rect.width, rect.height);
+
+        if (actor) {
+            for (const property of ['scale-x', 'scale-y', 'translation-x', 'translation-y', 'opacity']) {
+                this._borderBindings.push(actor.bind_property(
+                    property,
+                    this._border,
+                    property,
+                    GObject.BindingFlags.SYNC_CREATE
+                ));
+            }
+
+            global.window_group.set_child_above_sibling(this._border, actor);
+        }
+
         this._border.show();
     }
 
