@@ -2,41 +2,29 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 export default class HighlightFocusedWindowExtension extends Extension {
     enable() {
-        this._highlight = new St.Widget({
-            styleClass: 'focused-window-highlight',
-            reactive: false,
-            visible: false,
-        });
-
-        Main.layoutManager.addTopChrome(this._highlight, {trackFullscreen: true});
-
-        this._signals = [
-            [global.display, global.display.connect('notify::focus-window', () => this._update())],
-            [global.display, global.display.connect('window-created', () => this._update())],
-        ];
-
-        this._windowSignals = new Map();
+        this._border = null;
         this._transitionUpdateId = 0;
         this._transitionUpdateCount = 0;
 
-        this._signals.push([
-            global.window_manager,
-            global.window_manager.connect('size-changed', () => this._scheduleDelayedUpdate()),
-        ]);
+        this._signals = [
+            [global.display, global.display.connect('notify::focus-window', () => this._refresh())],
+            [global.display, global.display.connect('window-created', () => this._refresh())],
+            [global.window_manager, global.window_manager.connect('size-change', () => {
+                this._removeBorder();
+                this._startTransitionRefresh();
+            })],
+            [global.window_manager, global.window_manager.connect('size-changed', () => {
+                this._startTransitionRefresh();
+            })],
+        ];
 
-        this._watchFocusedWindow();
-        this._update();
+        this._refresh();
     }
 
     disable() {
-        for (const [window, ids] of this._windowSignals)
-            ids.forEach(id => window.disconnect(id));
-        this._windowSignals.clear();
-
         this._signals?.forEach(([object, id]) => object.disconnect(id));
         this._signals = null;
 
@@ -44,31 +32,17 @@ export default class HighlightFocusedWindowExtension extends Extension {
             GLib.Source.remove(this._transitionUpdateId);
         this._transitionUpdateId = 0;
 
-        this._highlight?.destroy();
-        this._highlight = null;
+        this._removeBorder();
     }
 
-    _watchFocusedWindow() {
-        const window = global.display.focus_window;
-        if (!window || this._windowSignals.has(window))
-            return;
-
-        const ids = [
-            window.connect('position-changed', () => this._update()),
-            window.connect('size-changed', () => this._update()),
-            window.connect('notify::minimized', () => this._update()),
-        ];
-        this._windowSignals.set(window, ids);
-    }
-
-    _scheduleDelayedUpdate() {
+    _startTransitionRefresh() {
         if (this._transitionUpdateId)
             GLib.Source.remove(this._transitionUpdateId);
 
         this._transitionUpdateCount = 0;
         this._transitionUpdateId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
             this._transitionUpdateCount++;
-            this._update();
+            this._refresh();
 
             if (this._transitionUpdateCount >= 10) {
                 this._transitionUpdateId = 0;
@@ -79,28 +53,31 @@ export default class HighlightFocusedWindowExtension extends Extension {
         });
     }
 
-    _update() {
-        if (!this._highlight)
-            return;
+    _removeBorder() {
+        this._border?.destroy();
+        this._border = null;
+    }
 
-        this._watchFocusedWindow();
-
+    _refresh() {
         const window = global.display.focus_window;
-        const actor = window?.get_compositor_private();
-        if (!window || !actor || window.minimized || !actor.visible) {
-            this._highlight.hide();
+        if (!window || window.minimized) {
+            this._removeBorder();
             return;
         }
 
-        const [x, y] = actor.get_transformed_position();
-        const [width, height] = actor.get_transformed_size();
-        if (width <= 0 || height <= 0) {
-            this._highlight.hide();
+        const rect = window.get_frame_rect();
+        if (rect.width <= 0 || rect.height <= 0)
             return;
-        }
 
-        this._highlight.set_position(Math.round(x), Math.round(y));
-        this._highlight.set_size(Math.round(width), Math.round(height));
-        this._highlight.show();
+        this._removeBorder();
+
+        this._border = new St.Bin({
+            styleClass: 'focused-window-highlight',
+            reactive: false,
+        });
+        global.window_group.add_child(this._border);
+        this._border.set_position(rect.x, rect.y);
+        this._border.set_size(rect.width, rect.height);
+        this._border.show();
     }
 }
