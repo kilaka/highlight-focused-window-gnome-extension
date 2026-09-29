@@ -1,0 +1,22 @@
+<schemalist>
+  <schema id="org.gnome.shell.extensions.highlight-focused-window"
+          path="/org/gnome/shell/extensions/highlight-focused-window/">
+    <key name="border-width" type="i">
+      <default>2</default>
+      <range min="1" max="50"/>
+      <summary>Border width</summary>
+      <description>Width of the focused-window border in pixels.</description>
+    </key>
+    <key name="border-color" type="s">
+      <default>'#643791'</default>
+      <summary>Border color</summary>
+      <description>Border color as a six-digit hexadecimal value.</description>
+    </key>
+    <key name="opacity" type="i">
+      <default>50</default>
+      <range min="0" max="100"/>
+      <summary>Border opacity</summary>
+      <description>Border opacity as a percentage.</description>
+    </key>
+  </schema>
+</schemalist>
