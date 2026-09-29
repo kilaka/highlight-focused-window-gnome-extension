@@ -7,6 +7,8 @@ export default class HighlightFocusedWindowExtension extends Extension {
     enable() {
         this._border = null;
         this._settings = this.getSettings();
+        this._trackedWindow = null;
+        this._trackedWindowSignals = [];
         this._transitionUpdateId = 0;
         this._transitionUpdateCount = 0;
 
@@ -17,8 +19,14 @@ export default class HighlightFocusedWindowExtension extends Extension {
         ];
 
         this._signals = [
-            [global.display, global.display.connect('notify::focus-window', () => this._refresh())],
-            [global.display, global.display.connect('window-created', () => this._refresh())],
+            [global.display, global.display.connect('notify::focus-window', () => {
+                this._trackFocusedWindow();
+                this._refresh();
+            })],
+            [global.display, global.display.connect('window-created', () => {
+                this._trackFocusedWindow();
+                this._refresh();
+            })],
             [global.window_manager, global.window_manager.connect('size-change', () => {
                 this._removeBorder();
                 this._startTransitionRefresh();
@@ -28,12 +36,14 @@ export default class HighlightFocusedWindowExtension extends Extension {
             })],
         ];
 
+        this._trackFocusedWindow();
         this._refresh();
     }
 
     disable() {
         this._signals?.forEach(([object, id]) => object.disconnect(id));
         this._signals = null;
+        this._untrackFocusedWindow();
         this._settingsSignals?.forEach(id => this._settings.disconnect(id));
         this._settingsSignals = null;
         this._settings = null;
@@ -68,7 +78,30 @@ export default class HighlightFocusedWindowExtension extends Extension {
         this._border = null;
     }
 
+    _trackFocusedWindow() {
+        const window = global.display.focus_window;
+        if (window === this._trackedWindow)
+            return;
+
+        this._untrackFocusedWindow();
+        this._trackedWindow = window;
+        if (!window)
+            return;
+
+        this._trackedWindowSignals = [
+            [window, window.connect('position-changed', () => this._startTransitionRefresh())],
+            [window, window.connect('size-changed', () => this._startTransitionRefresh())],
+        ];
+    }
+
+    _untrackFocusedWindow() {
+        this._trackedWindowSignals?.forEach(([object, id]) => object.disconnect(id));
+        this._trackedWindowSignals = [];
+        this._trackedWindow = null;
+    }
+
     _refresh() {
+        this._trackFocusedWindow();
         const window = global.display.focus_window;
         if (!window || window.minimized) {
             this._removeBorder();
