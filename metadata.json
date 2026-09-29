@@ -2,6 +2,7 @@
   "uuid": "highlight-focused-window@kilaka",
   "name": "Highlight Focused Window",
   "description": "Draws a subtle translucent purple border inside the focused window.",
+  "url": "https://github.com/kilaka/highlight-focused-window-gnome-extension",
   "version": 3,
   "settings-schema": "org.gnome.shell.extensions.highlight-focused-window",
   "shell-version": ["46"]
