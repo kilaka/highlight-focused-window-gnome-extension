@@ -1,9 +1,9 @@
 {
   "uuid": "highlight-focused-window@kilaka",
   "name": "Highlight Focused Window",
-  "description": "Draws a subtle translucent purple border inside the focused window.\nIncluding when maximized - good for multiple screens usage.",
+  "description": "Draws a subtle translucent border inside the focused window.\nSupports maximize, snap, and drag.\nExcellent for multiple displays usage.",
   "url": "https://github.com/kilaka/highlight-focused-window-gnome-extension",
-  "version": 4,
+  "version": 5,
   "settings-schema": "org.gnome.shell.extensions.highlight-focused-window",
   "shell-version": ["46"]
 }
